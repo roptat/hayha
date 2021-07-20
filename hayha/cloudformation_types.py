@@ -295,7 +295,16 @@ KNOWN_TYPES = {
   'AWS::ApiGateway::RestApi':
     CloudFormationResource(container=True),
 
-  'AWS::EC2::Host':
+#  My thought process in making these tables containers is that they contain data.
+#  I'm pretty sure they contain resources based off what it describes in the CloudFormation properties.
+#  To be more specific, some of the properties are of resource type and described as "on the table".
+#  I'm debating whether you could send requests to a whole table or not, but am leaning towards you can't.
+  'AWS::DynamoDB::GlobalTable':
+    CloudFormationResource(container=True),
+  'AWS::DynamoDB::Table':
+    CloudFormationResource(container=True),
+    
+  'AWS::EC2::Host': 
     CloudFormationResource(container=True),
   'AWS::EC2::Instance':
     CloudFormationResource(contained_in=[["HostId"], ["HostResourceGroupArn"], ["SubnetId"]],
@@ -344,6 +353,25 @@ KNOWN_TYPES = {
     CloudFormationResource(),
   'AWS::EFS::FileSystem':
     CloudFormationResource(),
+
+  'AWS::Glue::Classifier':
+    CloudFormationResource(),
+#  I'm unsure if there should be a direct_flow to CatalogID because wouldn't
+#  we need to send a request to the data catalog to create the catalog object (which I am assuming is this Connection)
+  'AWS::Glue::Connection':
+    CloudFormationResource(),
+#  This specific resource will be important to reference when creating the new Hayha property
+#  that accounts for increasing a resource's security authorization. "Role" is CloudFormation property
+#  that will be linked to this new Hayha property 
+# 'AWS::Glue::Crawler':
+#   CloudFormationResource(reverse_protection_flow=[["CrawlerSecurityConfiguration"]],
+#       direct_flow=[["DatabaseName"], ["Targets"]]),  
+#  Again, also unsure whether there should be a direct_flow to CatalogID.  
+  'AWS::Glue::Database':
+    CloudFormationResource(container=True),
+#  Unsure if there should be a direct_protection_flow to CatalogID.    
+  'AWS::Glue::DataCatalogEncryptionSettings':
+    CloudFormationResource(security=True),
 
   'AWS::IAM::InstanceProfile':
     CloudFormationResource(container=True,
