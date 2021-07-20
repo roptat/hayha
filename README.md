@@ -7,6 +7,8 @@ Intra-update sniping vulnerabilities may happen during an update because of
 ordering issues between individual component updates.  This tool is designed
 to find and report such issues.
 
+You can read the academic paper here: http://marksantolucito.com/papers/tacas2021.pdf
+
 Installation
 ------------
 
