@@ -21,33 +21,89 @@ class CloudFormationResource:
             contains=None, contained_in=None,
             security=False, accessible=True, container=False):
         """
-        Create a new CloudFormationResource, that describes how dataflow is
-        controlled by the resource.
 
-        `direct_flow` is a list of options whose references are to be scanned.
-        They create edges from this node to the references.  `reverse_flow` is
-        the same, but creates edges from the references to this node.
-        `managed_flow` is a list of pairs of options that create an edge
-        between references of the first option to references from the second
-        option. `security_*_flow` are the same, but refer to a security relation
-        between the two nodes that need more actions to be placed correctly in
-        the resulting graph.
+            I FIGURED I RE-ALIGN EVERYTHING ONCE NEW DOCUMENTATION WAS FULLY COMPLETE.
+        PERHAPS WE SHOULD MAKE A "cloudformation_types_documentation.txt" IN CASE
+        THIS GETS TOO LONG?
 
-        `contains` is a list of options whose references are to be scanned.
-        They can be used to create a container relationship from a container
-        resource to other resources.  `contained_in` works in the oposite
-        direction.
+        Background Information:
 
-        `security` indicates whether this type is a security resource or not.
-        `accessible` specifies whether this node is accessible from the internet
-        (whether it posesses a URL).  `container` controls whether this resource
-        type acts as a container for other resources.  This is used in combination
-        with security flow
+            CloudFormation resources are implemented into the Hayha tool/files
+        using a key-value structure (i.e. For ‘outgoing_connection=[[“K”]]’, the 
+        ‘outgoing_connection’ Hayha property is the key and the ‘[[“K”]]’ CloudFormation 
+        property/key is the value). 
+            CloudFormation files themselves implement resources using a key-value 
+        structure as well. In CloudFormation files, a key represents a property 
+        of the resource being implemented. For example, 'AWS::ApiGateway::Authorizer' 
+        contains the key ‘RestApiId’, which is documented in AWS Documentation as a 
+        property of the resource type. In CloudFormation files, a value contains a 
+        reference pointer(s) to a resource(s). In this case, the value connected 
+        to ‘RestApiId’ would be a String representing the ID of the RestApi resource 
+        the authorizer is created in. So, we can conclude for ‘AWS::ApiGateway::Authorizer’, 
+        ‘some_protection_of=[[“RestApiId”]]’ exists (turns out to be ‘entrance_protection_of’ 
+        after reading AWS Documentation thoroughly). 
+            Note, “K” is the name of the CloudFormation property/key. In the Hayha tool/files, 
+        “K” acts almost like a placeholder or variable, essentially referring to what 
+        the CloudFormation value will be.
 
-        An option is specified as a list of keys that need to be analyzed in
-        order.  For instance ["a" "b"] means content["a"]["b"].  When content
-        is a list, every element is analyzed.  When the key doesn't exist, it
-        is ignored.
+        Hayha Property/Key Documentation:
+
+        `outgoing_connection`
+            Examples: AWS::ApiGateway::Method',Integration; AWS::EC2::Instance, Volumes
+            Description: A key-value property in the parent resource type (“A”) that 
+            specifies that “A” can send requests to another resource type (“B”), using 
+            “K” which is a CloudFormation property/key name in “A” and refers to/is connected 
+            to a value that is a reference pointer to “B”. For example, if Hayha is configured 
+            as ‘direct_flow=[[“K”]]’, this would specify a connection from resource type “A” 
+            to another resource type (“B”). This relationship can send and receive data both ways, 
+            but only resource “A” can initiate communication. This Hayha property is 
+            inverse to the reverse_flow property in which, if identically configured, 
+            “B” would point to “A”.
+
+        `incoming_connection`
+        Examples:
+        Description: A key-value property in the parent resource type (“A”) that specifies that “A” receives requests from another resource type (“B”), using “K” which is a CloudFormation property/key name in “A” and refers to/is connected to a value that is a reference pointer to “B”. If configured as ‘reverse_flow=[[“B”]]’, this would specify a connection from resource type “B” to type “A”. This relationship can send and receive data both ways, but only resource type “B” can initiate communication.  The inverse to the direct_flow property in which, if identically configured, “A” would point to “B”.
+
+        ‘connection_to_form’
+        Examples:
+        Description: A key-value property in the parent resource type (“A”) that specifies that one resource type (“B”) should send a request to another resource type (“C”). If configured as managed_flow=[[“B”, “C”]], the parent resource type ALLOWS (doesn’t really tell “B” to send a request to “C”) “B” to send requests to “C”. Note, this doesn’t necessarily mean “B” will be able to send requests to “C”. If there is a protection/authorization check and “B” has a security level lower than what is necessary to communicate with “C”, communication will fail (same with direct and reverse flow).
+
+        `entrance_protection_of`
+        Examples:
+        Description: A key-value property in the parent resource(“A”) that specifies that “A” protects all incoming connections to the specified resource (“B”). If any resource (“C”)  has a direct_flow relationship with “B”or if “B” has a reverse_flow with “C” (either “C” is configured with ‘direct_flow = [[“B”]] or “B” is configured with ‘reverse_flow = [[“C”]]’), that connection will be subject to protection/authentication by resource “A”. In these cases, the security level of “A” shall be added onto the current security level of “B”.
+
+        ‘exit_protection_of’
+        Examples:
+        Description: A key-value property in the parent resource(“A”) that specifies that “A” protects all outgoing connections from the specified resource (“B”).  If “B” has a direct_flow relationship with any other resource (“C”) or if “C” has a reverse_flow with “B” (either “B” is configured with ‘direct_flow = [[“C”]] or “C” is configured with ‘reverse_flow = [[“B”]]’), that connection will be subject to protection/authentication by resource “A”. In these cases, the security level of “A” shall be added onto the current security level of “C”.
+
+        `entrance_protection_by`
+        Examples:
+        Description:
+
+        ‘exit_protection_by’
+        Examples:
+        Description:
+
+        `managed_protection_flow`
+        Examples:
+        Description: A key-value property in the parent resource(“A”) that specifies that “A” protects a specific connection with a specified resource (“B”) and another resource (“C”). “managed_protection_flow”=[[“B”, “C”]] signifies resource “B” has a direct flow connection with resource “C”(or “C” has a reverse flow connection with “B”) and that connection will be subject to protection by resource “A”.
+
+        `accessible`
+        Examples:
+        Description: This key-value property indicates the parent resource is publicly accessible, which means it has a URL.
+
+        ‘security’
+        Examples:
+        Description:
+
+        ‘contained_in’
+        Examples:
+        Description: This key-value property indicates that the parent resource contains other resources. In other words, the other resources are subtypes of the parent resource.
+
+        ‘container’
+        Examples:
+        Description:  This key-value property indicates that the parent resource is a subtype of the specified resource.
+
         """
         self.security = security
         self.direct_flow = [] if direct_flow is None else direct_flow
