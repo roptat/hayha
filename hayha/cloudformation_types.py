@@ -14,7 +14,7 @@ class CloudFormationResource:
     #  The way I understand it is that a resource with this property creates/forms connections
     #  between two other resources? Let me know and if everything is okay, I'll just delete these
     #  comments.
-    def __init__(self, outgoing_connection=None, incoming_connection=None, connection_to_form=None,
+    def __init__(self, outgoing_connection=None, incoming_connection=None, connection_to_create=None,
             entrance_protection_of=None, entrance_protection_by=None,
             connection_to_protect=None,
             exit_protection_of=None, exit_protection_by=None,
