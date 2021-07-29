@@ -6,10 +6,18 @@ from numbers import Number
 from .dataflow import Resource, SecurityResource
 
 class CloudFormationResource:
-    def __init__(self, direct_flow=None, reverse_flow=None, managed_flow=None,
-            direct_protection_flow=None, reverse_protection_flow=None,
-            managed_protection_flow=None,
-            direct_protected_from_flow=None, reverse_protected_from_flow=None,
+    #  Here are some name changes I thought made things easier to understand.
+    #  I've only changed the names here. Let me know what you think, so I can
+    #  change the names accross the file (or not).
+    #  (edit) I've changed the names to counter-proposal. I don't think there is
+    #  a typo in 'connection_to_form' because it's replacing 'managed_connection_flow'??
+    #  The way I understand it is that a resource with this property creates/forms connections
+    #  between two other resources? Let me know and if everything is okay, I'll just delete these
+    #  comments.
+    def __init__(self, outgoing_connection=None, incoming_connection=None, connection_to_create=None,
+            entrance_protection_of=None, entrance_protection_by=None,
+            connection_to_protect=None,
+            exit_protection_of=None, exit_protection_by=None,
             contains=None, contained_in=None,
             security=False, accessible=True, container=False):
         """
