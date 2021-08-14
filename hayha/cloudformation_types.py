@@ -21,33 +21,151 @@ class CloudFormationResource:
             contains=None, contained_in=None,
             security=False, accessible=True, container=False):
         """
-        Create a new CloudFormationResource, that describes how dataflow is
-        controlled by the resource.
 
-        `direct_flow` is a list of options whose references are to be scanned.
-        They create edges from this node to the references.  `reverse_flow` is
-        the same, but creates edges from the references to this node.
-        `managed_flow` is a list of pairs of options that create an edge
-        between references of the first option to references from the second
-        option. `security_*_flow` are the same, but refer to a security relation
-        between the two nodes that need more actions to be placed correctly in
-        the resulting graph.
+        Background Information:
 
-        `contains` is a list of options whose references are to be scanned.
-        They can be used to create a container relationship from a container
-        resource to other resources.  `contained_in` works in the oposite
-        direction.
+            CloudFormation resources are implemented into the Hayha tool/files using
+        a key-value structure (i.e. For ‘outgoing_connection=[[“K”]]’, the ‘outgoing_connection’
+        Hayha property is the key and the ‘[[“K”]]’ CloudFormation property/key is the value).
+            CloudFormation files themselves implement resources using a key-value structure as well.
+        In CloudFormation files, a key represents a property of the resource being
+        implemented. For example, 'AWS::ApiGateway::Authorizer' contains the key
+        ‘RestApiId’, which is documented in AWS Documentation as a property of the resource
+        type. In CloudFormation files, a value contains a reference pointer(s) to a resource(s).
+        In this case, the value connected to ‘RestApiId’ would be a String representing the ID
+        of the RestApi resource the authorizer is created in. Notice, the ID is not the resource
+        itself, but points to the specified RestApi resource. So, we can conclude for
+        ‘AWS::ApiGateway::Authorizer’, ‘some_protection_of=[[“RestApiId”]]’ exists
+        (turns out to be ‘entrance_protection_of’ after reading AWS Documentation thoroughly).
+            Note, “K” is the name of the CloudFormation property/key. In the Hayha tool/files,
+        “K” acts almost like a variable or placeholder, essentially referring to what the
+        CloudFormation value will be.
+            Note, a connection between two resource types (for example, resource type “A” and
+        “B”) doesn’t necessarily mean “A” will be able to send requests to “B” (or vice versa).
+        Let’s say a request arrives at and passes through “A” towards “B”, but there is
+        a security/protection/authorization check that requires a security level higher
+        than the security level of the request. Though there is a connection from “A” to “B”,
+        communication will fail because the request does not have the required, minimum
+        security level to access “B”.
 
-        `security` indicates whether this type is a security resource or not.
-        `accessible` specifies whether this node is accessible from the internet
-        (whether it posesses a URL).  `container` controls whether this resource
-        type acts as a container for other resources.  This is used in combination
-        with security flow
 
-        An option is specified as a list of keys that need to be analyzed in
-        order.  For instance ["a" "b"] means content["a"]["b"].  When content
-        is a list, every element is analyzed.  When the key doesn't exist, it
-        is ignored.
+        Hayha Property/Key Documentation:
+
+        `outgoing_connection`:
+            Description: A key-value property in the parent resource type (“A”)
+            that specifies that “A” can send requests to another resource type (“B”),
+            using “K”, which is a CloudFormation property/key name in “A”. In the
+            context of the Hayha tool/files, “K” refers to its m respective CloudFormation
+            value, which is a reference pointer to “B”. For example, if Hayha is
+            configured as ‘outgoing_connection=[[“K”]]’, this would specify a connection
+            from resource type “A” to another resource type (“B”). This relationship can
+            send and receive data both ways, but only resource “A” can initiate communication.
+            This Hayha property is the inverse to the ‘incoming_connection’ property in which,
+            if identically configured, “B” would point to “A”.
+
+        `incoming_connection`:
+            Description: A key-value property in the parent resource type (“A”)
+            that specifies that “A” receives requests from another resource type
+            (“B”), using “K”, which is a CloudFormation property/key name in “A”.
+            In the context of the Hayha tool/files, “K” refers to its respective
+            CloudFormation value, which is a reference pointer to “B”. If configured
+            as ‘incoming_connection=[[“K”]]’, this would specify a connection from
+            resource type “B” to type “A”. This relationship can send and receive.
+            data both ways, but only resource type “B” can initiate communication.
+            This Hayha property is the inverse to the ‘outgoing_connection’ property
+            in which, if identically configured, “A” would point to “B”.
+
+        ‘connection_to_create’:
+            Description: A key-value property in the parent resource type (“A”) that
+            specifies that one resource type (“B”) should send a request to another
+            resource type (“C”), using “KB” and “KC”, which are CloudFormation
+            properties/key names in “A”. In the context of the Hayha tool/files,
+            “KB” and “KC” refer to their respective values, which are reference
+            pointers to either “B” or  “C”. If configured as ‘connection_to_create=[[“KB”, “KC”]]’,
+            the parent resource type allows for “B” to send requests to “C”.
+
+        `entrance_protection_of`:
+            Description: A key-value property in the parent resource type(“A”) that
+            specifies that “A” protects all incoming connections to the specified
+            resource type (“B”), using “K”, which is a CloudFormation property/key name
+            in “A”. In the context of the Hayha tool/files, “K” refers to its respective
+            CloudFormation value, which is a reference pointer to “B”. If any resource
+            type (“C”) is configured to have an ‘outgoing_connection’ to “B”or if “B”
+            is configured to have an ‘incoming_connection’ from “C” , that connection
+            will be subject to protection/authentication by resource “A”. In these cases,
+            the minimum security level required to pass protection/authentication
+            by “A” shall be added onto the minimum security level required to reach “C”.
+            Their sum becomes the minimum security level required to reach “B”.
+
+        ‘exit_protection_of’:
+            Description: A key-value property in the parent resource type (“A”) that
+            specifies that “A” protects all outgoing connections from the specified
+            resource type (“B”), using “K”, which is a CloudFormation property/key name
+            in “A”. In the context of the Hayha tool/files, “K” refers to its respective
+            CloudFormation value, which is a reference pointer to “B”. If “B” is configured
+            to have an “incoming_connection” to any other resource (“C”) or if “C” is
+            configured to have an “outgoing_connection” to “B”, that connection will be
+            subject to protection/authentication by resource “A”. In these cases, the
+            minimum security level required to pass protection/authentication by “A” shall
+            be added onto the minimum security level required to reach “B”. Their sum
+            becomes the minimum security level required to reach “C”.
+
+        `entrance_protection_by`:
+            Description: A key-value property in the parent resource type(“A”) that
+            specifies that all incoming connections to “A” are protected by the
+            specified resource type (“B”), using “K”, which is a CloudFormation
+            property/key name in “A”. In the context of the Hayha tool/files, “K” refers
+            to its respective CloudFormation value, which is a reference pointer to “B”.
+            If any resource type (“C”) is configured to have an ‘outgoing_connection’
+            to “A” or if “A” is configured to have an ‘incoming_connection’ from “C” ,
+            that connection will be subject to protection/authentication by resource “B”.
+            In these cases, the minimum security level required to pass protection/authentication
+            by “B” shall be added onto the minimum security level required to reach
+            “C”. Their sum becomes the minimum security level required to reach “A”.
+
+        ‘exit_protection_by’:
+            Description: A key-value property in the parent resource type(“A”) that
+            specifies that all outgoing connections from “A” are protected by the
+            specified resource type (“B”), using “K”, which is a CloudFormation property/key name
+            in “A”. In the context of the Hayha tool/files, “K” refers to its respective
+            CloudFormation value, which is a reference pointer to “B”. If any resource type (“C”)
+            is configured to have an ‘incoming_connection’ from “A” or if “A” is
+            configured to have an ‘outgoing_connection’ to “C”, that connection will
+            be subject to protection/authentication by resource “B”. In these cases, the
+            minimum security level required to pass protection/authentication by “B” shall
+            be added onto the minimum security level required to reach “A”. Their
+            sum becomes the minimum security level required to reach “C”.
+
+        `connection_to_protect`:
+            Description: A key-value property in the parent resource type (“A”) that
+            specifies that “A” protects a specific connection with a specified resource
+            type (“B”) and another resource type (“C”), using “KB” and “KC”, which
+            are CloudFormation properties/key names in “A”. In the context of the
+            Hayha tool/files, “KB” and “KC” refer to their respective values, which
+            are reference pointers to either “B” or  “C”. If configured as ‘managed_protection_flow=[[“B”, “C”]]’,
+            it signifies “B” has an outgoing connection to “C” and that connection
+            will be subject to protection by resource “A”.
+
+        *Still confused about what it means to “have a URL”. I thought it meant having a URL to the AWS documentation about it, but it didn’t make sense because all the resource types are in the AWS documentation. Unsure why we need this property as well*
+        `accessible`:
+            Description: This key-value property indicates the parent resource type
+            is publicly accessible, which means it has a URL.
+
+        *I’m unsure about this definition and am still a little confused why we need this property.*
+        ‘security’:
+            Description: This key-value property indicates that the parent resource
+            type is some sort of security resource type. The parent resource type
+            does not necessarily need to have some protection 
+
+        ‘contained_in’:
+            Description: This key-value property indicates that the parent resource
+            is a subtype of the specified resource.
+
+        ‘container_of’:
+            Description: This key-value property indicates that the specified resource
+            is a subtype of the parent resource.
+
+
         """
         self.security = security
         self.direct_flow = [] if direct_flow is None else direct_flow
