@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Lepiller
+    given-names: Julien
+    orcid: https://orcid.org/0000−0003−2284−5488
+  - family-names: Piskac
+    given-names: Ruzica
+  - family-names: Schäf
+    given-names: Martin
+  - family-names: Santolucito
+    given-names: Mark
+    orcid: https://orcid.org/0000−0001−8646−4364
+title: "Häyhä"
+url: "https://github.com/roptat/hayha"
+preferred-citation:
+  type: conference-paper
+  authors:
+    - family-names: Lepiller
+      given-names: Julien
+      orcid: https://orcid.org/0000−0003−2284−5488
+    - family-names: Piskac
+      given-names: Ruzica
+    - family-names: Schäf
+      given-names: Martin
+    - family-names: Santolucito
+      given-names: Mark
+      orcid: https://orcid.org/0000−0001−8646−4364
+  doi: "10.1007/978-3-030-72013-1_6"
+  title: "Analyzing Infrastructure as Code to Prevent Intra-update Sniping Vulnerabilities"
+  collection-title: "Tools and Algorithms for the Construction and Analysis of Systems"
+  year: 2021
+  start: 105
+  end: 123
+  isbn: "978-3-030-72013-1"
+  editors:
+  - family-name: Groote
+    given-names: Jan Friso
+  - family-name: Larsen
+    given-names: Kim Guldstrand
+  publisher:
+    name: "Springer International Publishing"
