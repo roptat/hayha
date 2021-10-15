@@ -10,7 +10,7 @@ class CloudFormationResource:
     #  I've only changed the names here. Let me know what you think, so I can
     #  change the names accross the file (or not).
     #  (edit) I've changed the names to counter-proposal. I don't think there is
-    #  a typo in 'connection_to_form' because it's replacing 'managed_connection_flow'??
+    #  a typo in 'connection_to_create' because it's replacing 'managed_connection_flow'??
     #  The way I understand it is that a resource with this property creates/forms connections
     #  between two other resources? Let me know and if everything is okay, I'll just delete these
     #  comments.
@@ -24,10 +24,10 @@ class CloudFormationResource:
         Create a new CloudFormationResource, that describes how dataflow is
         controlled by the resource.
 
-        `direct_flow` is a list of options whose references are to be scanned.
-        They create edges from this node to the references.  `reverse_flow` is
+        `outgoing_connection` is a list of options whose references are to be scanned.
+        They create edges from this node to the references.  `incoming_connection` is
         the same, but creates edges from the references to this node.
-        `managed_flow` is a list of pairs of options that create an edge
+        `connection_to_create` is a list of pairs of options that create an edge
         between references of the first option to references from the second
         option. `security_*_flow` are the same, but refer to a security relation
         between the two nodes that need more actions to be placed correctly in
@@ -50,14 +50,14 @@ class CloudFormationResource:
         is ignored.
         """
         self.security = security
-        self.direct_flow = [] if direct_flow is None else direct_flow
-        self.reverse_flow = [] if reverse_flow is None else reverse_flow
-        self.managed_flow = [] if managed_flow is None else managed_flow
-        self.direct_protection_flow = [] if direct_protection_flow is None else direct_protection_flow
-        self.reverse_protection_flow = [] if reverse_protection_flow is None else reverse_protection_flow
-        self.managed_protection_flow = [] if managed_protection_flow is None else managed_protection_flow
-        self.direct_protected_from_flow = [] if direct_protected_from_flow is None else direct_protected_from_flow
-        self.reverse_protected_from_flow = [] if reverse_protected_from_flow is None else reverse_protected_from_flow
+        self.outgoing_connection = [] if outgoing_connection is None else outgoing_connection
+        self.incoming_connection = [] if incoming_connection is None else incoming_connection
+        self.connection_to_create = [] if connection_to_create is None else connection_to_create
+        self.entrance_protection_of = [] if entrance_protection_of is None else entrance_protection_of
+        self.entrance_protection_by = [] if entrance_protection_by is None else entrance_protection_by
+        self.connection_to_protect = [] if connection_to_protect is None else connection_to_protect
+        self.exit_protection_of = [] if exit_protection_of is None else exit_protection_of
+        self.exit_protection_by = [] if exit_protection_by is None else exit_protection_by
         self.contains = [] if contains is None else contains
         self.contained_in = [] if contained_in is None else contained_in
         self.container = container
@@ -84,16 +84,16 @@ class CloudFormationResource:
     def get_edges(self, content, context):
         """
         Scan the content for references and return a list of edges, according
-        to direct_flow, reverse_flow and managed_flow.
+        to outgoing_connection, incoming_connection and connection_to_create.
         """
         edges = []
-        for option in self.direct_flow:
+        for option in self.outgoing_connection:
             for ref in self.flatten(self.references(content, option)):
                 edges.append({'from': context, 'to': ref})
-        for option in self.reverse_flow:
+        for option in self.incoming_connection:
             for ref in self.flatten(self.references(content, option)):
                 edges.append({'from': ref, 'to': context})
-        for (o1, o2) in self.managed_flow:
+        for (o1, o2) in self.connection_to_create:
             r1 = self.flatten(self.references(content, o1))
             r2 = self.flatten(self.references(content, o2))
             for ref1 in r1:
@@ -108,22 +108,22 @@ class CloudFormationResource:
         the 'to' node is protected by the 'security' node.
         """
         edges = []
-        for option in self.direct_protection_flow:
+        for option in self.entrance_protection_of:
             for ref in self.flatten(self.references(content, option)):
                 edges.append({'security': context, 'to': ref})
-        for option in self.reverse_protection_flow:
+        for option in self.entrance_protection_by:
             for ref in self.flatten(self.references(content, option)):
                 edges.append({'security': ref, 'to': context})
-        for (o1, o2) in self.managed_protection_flow:
+        for (o1, o2) in self.connection_to_protect:
             r1 = self.flatten(self.references(content, o1))
             r2 = self.flatten(self.references(content, o2))
             for ref1 in r1:
                 for ref2 in r2:
                     edges.append({'security': ref1, 'to': ref2})
-        for option in self.direct_protected_from_flow:
+        for option in self.exit_protection_of:
             for ref in self.flatten(self.references(content, option)):
                 edges.append({'security': ref, 'from': context})
-        for option in self.reverse_protected_from_flow:
+        for option in self.exit_protection_by:
             for ref in self.flatten(self.references(content, option)):
                 edges.append({'security': context, 'from': ref})
         return edges
@@ -294,11 +294,11 @@ class AbstractNode:
 KNOWN_TYPES = {
   'AWS::ApiGateway::Authorizer':
     CloudFormationResource(security=True,
-        direct_protection_flow=[["RestApiId"]]),
+        entrance_protection_of=[["RestApiId"]]),
   'AWS::ApiGateway::Method':
     CloudFormationResource(
-        reverse_protection_flow=[["AuthorizerId"]],
-        direct_flow=[["Integration"]],
+        entrance_protection_by=[["AuthorizerId"]],
+        outgoing_connection=[["Integration"]],
         contained_in=[["RestApiId"]]),
   'AWS::ApiGateway::RestApi':
     CloudFormationResource(container=True),
@@ -316,20 +316,20 @@ KNOWN_TYPES = {
     CloudFormationResource(container=True),
   'AWS::EC2::Instance':
     CloudFormationResource(contained_in=[["HostId"], ["HostResourceGroupArn"], ["SubnetId"]],
-        reverse_protection_flow=[["IamInstanceProfile"], ["SecurityGroupIds"], ["SecurityGroups"]],
-        direct_flow=[["Volumes"]]),
+        entrance_protection_by=[["IamInstanceProfile"], ["SecurityGroupIds"], ["SecurityGroups"]],
+        outgoing_connection=[["Volumes"]]),
   'AWS::EC2::InternetGateway':
     CloudFormationResource(),
   'AWS::EC2::NetworkAcl':
     CloudFormationResource(security=True,
-        direct_protection_flow=[["VpcId"]]),
+        entrance_protection_of=[["VpcId"]]),
   'AWS::EC2::NetworkAclEntry':
     CloudFormationResource(security=True,
-        direct_protection_flow=[["NetworkAclId"]]),
+        entrance_protection_of=[["NetworkAclId"]]),
   'AWS::EC2::SecurityGroup':
     CloudFormationResource(security=True,
-      direct_protection_flow=[["SecurityGroupEgress"]],
-      reverse_protected_from_flow=[["SecurityGroupIngress"]]),
+      entrance_protection_of=[["SecurityGroupEgress"]],
+      exit_protection_by=[["SecurityGroupIngress"]]),
   'AWS::EC2::SecurityGroupEgress':
     CloudFormationResource(security=True),
   'AWS::EC2::SecurityGroupIngress':
@@ -340,14 +340,14 @@ KNOWN_TYPES = {
   'AWS::EC2::SubnetNetworkAclAssociation':
     CloudFormationResource(
         accessible=False,
-        managed_protection_flow=[(["NetworkAclId"], ["SubnetId"])]),
+        connection_to_protect=[(["NetworkAclId"], ["SubnetId"])]),
   'AWS::EC2::Volume':
     CloudFormationResource(accessible=False),
   'AWS::EC2::VPC':
     CloudFormationResource(accessible=False, container=True),
   'AWS::EC2::VPCGatewayAttachment':
     CloudFormationResource(accessible=False,
-        managed_flow=[(["InternetGatewayId"], ["VpcId"]),
+        connection_to_create=[(["InternetGatewayId"], ["VpcId"]),
             (["VpnGatewayId"], ["VpcId"])]),
 
   'AWS::ECS::MountGroup':
@@ -364,7 +364,7 @@ KNOWN_TYPES = {
 
   'AWS::Glue::Classifier':
     CloudFormationResource(),
-#  I'm unsure if there should be a direct_flow to CatalogID because wouldn't
+#  I'm unsure if there should be a outgoing_connection to CatalogID because wouldn't
 #  we need to send a request to the data catalog to create the catalog object (which I am assuming is this Connection)
   'AWS::Glue::Connection':
     CloudFormationResource(),
@@ -372,12 +372,12 @@ KNOWN_TYPES = {
 #  that accounts for increasing a resource's security authorization. "Role" is CloudFormation property
 #  that will be linked to this new Hayha property 
 # 'AWS::Glue::Crawler':
-#   CloudFormationResource(reverse_protection_flow=[["CrawlerSecurityConfiguration"]],
-#       direct_flow=[["DatabaseName"], ["Targets"]]),  
-#  Again, also unsure whether there should be a direct_flow to CatalogID.  
+#   CloudFormationResource(entrance_protection_by=[["CrawlerSecurityConfiguration"]],
+#       outgoing_connection=[["DatabaseName"], ["Targets"]]),  
+#  Again, also unsure whether there should be a outgoing_connection to CatalogID.  
   'AWS::Glue::Database':
     CloudFormationResource(container=True),
-#  Unsure if there should be a direct_protection_flow to CatalogID.    
+#  Unsure if there should be a entrance_protection_of to CatalogID.    
   'AWS::Glue::DataCatalogEncryptionSettings':
     CloudFormationResource(security=True),
 
@@ -387,33 +387,33 @@ KNOWN_TYPES = {
         contains=[["Roles"]]),
   'AWS::IAM::Policy':
     CloudFormationResource(security=True,
-        reverse_protection_flow=[["Roles"]]),
+        entrance_protection_by=[["Roles"]]),
   'AWS::IAM::Role':
     CloudFormationResource(security=True,
-        reverse_protection_flow=[["ManagedPolicyArns"], ["PermissionsBoundary"],
+        entrance_protection_by=[["ManagedPolicyArns"], ["PermissionsBoundary"],
                                  ["Policies"]],
         accessible=False),
 
   'AWS::Lambda::Function':
-    CloudFormationResource(reverse_protection_flow=[["Role"]], accessible=False),
+    CloudFormationResource(entrance_protection_by=[["Role"]], accessible=False),
   'AWS::Lambda::Permission':
     CloudFormationResource(security=True,
-        direct_protection_flow=[["FunctionName"]],
-        reverse_protected_from_flow=[["SourceArn"]],
+        entrance_protection_of=[["FunctionName"]],
+        exit_protection_by=[["SourceArn"]],
         accessible=False),
  
   'AWS::RDS::DBInstance':
-    CloudFormationResource(reverse_protection_flow=[["AccessControl"]]),
+    CloudFormationResource(entrance_protection_by=[["AccessControl"]]),
   'AWS::RDS::DBCluster':
-    CloudFormationResource(reverse_protection_flow=[["AccessControl"]]),
+    CloudFormationResource(entrance_protection_by=[["AccessControl"]]),
   'AWS::RDS::DBSubnetGroup':
-    CloudFormationResource(reverse_protection_flow=[["AccessControl"]]),
+    CloudFormationResource(entrance_protection_by=[["AccessControl"]]),
 
   'AWS::S3::Bucket':
-    CloudFormationResource(reverse_protection_flow=[["AccessControl"]]),
+    CloudFormationResource(entrance_protection_by=[["AccessControl"]]),
   'AWS::S3::BucketPolicy':
     CloudFormationResource(security=True,
-        direct_protection_flow=[["Bucket"]]),
+        entrance_protection_of=[["Bucket"]]),
 
 }
 
